@@ -1,0 +1,98 @@
+---
+title: "Reproducible science assignment"
+author: "Anita Høyland"
+date: "08.10.26"
+output:
+  html_document:
+    df_print: paged
+---
+Reading the data
+```{r}
+library(performance)
+library(see)
+library(tidyverse)
+
+df_park <- read_csv("Parketal2001WBK-2.csv")
+```
+quality control
+
+```{r}
+ggplot(data = df_park,
+       aes(x = Airspeed)) +
+  geom_histogram()
+```
+```{r}
+ggplot(data = df_park,
+       aes(x = Wingbeat_Amp))+
+  geom_histogram() 
+```
+
+```{r}
+df_park |> 
+  filter(Bird_ID == 1) |> 
+  ggplot(aes(x = Airspeed, y = Wingbeat_Amp)) +
+  geom_point() +
+  xlim(0,14) +
+  ylim(40,130) +
+  theme_bw()
+```
+analyzing one of the birds
+```{r}
+df_bird1 <- df_park |> 
+  filter(Bird_ID == 1)
+```
+
+regression analysis on bird ID 1
+```{r}
+lm_wba_1 <- lm(Wingbeat_Amp ~ Airspeed,
+               data = df_bird1)
+str(lm_wba_1)
+```
+checking the model
+```{r}
+check_model(lm_wba_1)
+```
+checking sumamry
+```{r}
+summary(lm_wba_1)
+```
+checking confidence interval
+```{r}
+confint(lm_wba_1)
+```
+updating the model with one subset of data
+```{r}
+lm_wba_2 <- update(lm_wba_1, data = df_bird1 [-1,])
+summary(lm_wba_1)
+summary(lm_wba_2)
+```
+predicting the respons variable over a certain range
+```{r}
+df_newbird <-
+tibble(Airspeed = seq(min(df_bird1$Airspeed),
+                      max(df_bird1$Airspeed),
+                      length = 100))
+  
+df_newbird
+
+df_preds <- predict(lm_wba_1,
+                    newdata = df_newbird,
+                    int = "c")
+df_newbird_preds <- bind_cols(df_newbird, as_tibble(df_preds))
+```
+
+
+```{r}
+ggplot(df_newbird_preds) +
+  aes(x = Airspeed, y = fit) +
+  geom_line() +
+  geom_point(data = df_bird1, aes(x = Airspeed, y = Wingbeat_Amp)) +
+  geom_ribbon(aes(ymin = lwr,
+                  ymax = upr),
+              alpha = 0.25) +
+  labs(x = "Airspeed (m/s)",
+       y = expression("Wingbeat_Amplitude")) +
+  theme_bw()
+
+```
+
