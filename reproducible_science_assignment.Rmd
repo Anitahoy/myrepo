@@ -1,0 +1,108 @@
+---
+title: "Reproducible science assignment"
+author: "Anita Høyland"
+date: "08.10.26"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+## Introduction
+This analysis studies the relation between the swallows wingbeat amplitude and airspeed where airspeed is the predictor and the wingbeat amplitude is the response factor for this. The purpouse is to learn linear regression.
+
+The dataset is based on two different birds with ID 1 and ID 2. Each bird were placed in a wind tunnel where the speed of the airflow could be tampered with. The data is given to us in the BIO415 course, and is available through the link "Parketal2001WBK-2.csv"
+
+Reading the data
+```{r}
+library(performance)
+library(see)
+library(tidyverse)
+
+df_park <- read_csv("Parketal2001WBK-2.csv")
+```
+quality control
+
+```{r}
+ggplot(data = df_park,
+       aes(x = Airspeed)) +
+  geom_histogram()
+```
+```{r}
+ggplot(data = df_park,
+       aes(x = Wingbeat_Amp))+
+  geom_histogram() 
+```
+Plotting for the bird with ID 1
+```{r}
+df_park |> 
+  filter(Bird_ID == 1) |> 
+  ggplot(aes(x = Airspeed, y = Wingbeat_Amp)) +
+  geom_point() +
+  xlim(0,14) +
+  ylim(40,130) +
+  theme_bw()
+```
+analyzing one of the birds
+```{r}
+df_bird1 <- df_park |> 
+  filter(Bird_ID == 1)
+```
+
+regression analysis on bird ID 1
+```{r}
+lm_wba_1 <- lm(Wingbeat_Amp ~ Airspeed,
+               data = df_bird1)
+str(lm_wba_1)
+```
+checking the model
+```{r}
+check_model(lm_wba_1)
+```
+checking sumamry
+```{r}
+summary(lm_wba_1)
+```
+checking confidence interval
+```{r}
+confint(lm_wba_1)
+```
+updating the model with one subset of data
+```{r}
+lm_wba_2 <- update(lm_wba_1, data = df_bird1 [-1,])
+summary(lm_wba_1)
+summary(lm_wba_2)
+```
+predicting the respons variable over a certain range
+```{r}
+df_newbird <-
+tibble(Airspeed = seq(min(df_bird1$Airspeed),
+                      max(df_bird1$Airspeed),
+                      length = 100))
+  
+df_newbird
+
+df_preds <- predict(lm_wba_1,
+                    newdata = df_newbird,
+                    int = "c")
+df_newbird_preds <- bind_cols(df_newbird, as_tibble(df_preds))
+```
+
+
+```{r}
+ggplot(df_newbird_preds) +
+  aes(x = Airspeed, y = fit) +
+  geom_line() +
+  geom_point(data = df_bird1, aes(x = Airspeed, y = Wingbeat_Amp)) +
+  geom_ribbon(aes(ymin = lwr,
+                  ymax = upr),
+              alpha = 0.25) +
+  labs(x = "Airspeed (m/s)",
+       y = expression("Wingbeat_Amplitude")) +
+  theme_bw()
+
+```
+
+
+## Interpretation of results
+The model shows a positive relation between the predictor and the response factor. When the airspeed is increased, the wingbeat amplitude also increases.The data is only representative for two individual birds, and one bird species. This is a relevant limitation for beeing able to draw a clean conclusion because the wingbeat amplitude and airspeed tolerance has a clear variation between bird species.
